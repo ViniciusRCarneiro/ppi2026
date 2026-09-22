@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SunSafe — Monitor de Exposição Solar</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --sol-1:#FFD93D;--sol-2:#FF9F1C;--sol-3:#FF6B35;
+  --ceu-2:#4361EE;--roxo:#7209B7;--rosa:#F72585;
+  --verde:#06D6A0;--vermelho:#EF476F;
+  --bg-1:#F6F7FB;--bg-2:#EDEFF7;--card:#FFFFFF;--card-2:#F8F9FC;
+  --sidebar:#FFFFFF;--texto:#0F172A;--texto-suave:#64748B;--borda:#E2E8F0;
+  --sombra:0 1px 3px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.06);
+  --sombra-forte:0 20px 60px rgba(15,23,42,.12);
+  --grad-sol:linear-gradient(135deg,#FFD93D 0%,#FF9F1C 50%,#FF6B35 100%);
+  --grad-ceu:linear-gradient(135deg,#4CC9F0 0%,#4361EE 50%,#7209B7 100%);
+}
+[data-tema="escuro"]{
+  --bg-1:#0B1020;--bg-2:#0F172A;--card:#151C33;--card-2:#1B2340;--sidebar:#0F172A;
+  --texto:#F1F5F9;--texto-suave:#94A3B8;--borda:#253052;
+  --sombra:0 1px 3px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.4);
+  --sombra-forte:0 20px 60px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg-1);color:var(--texto);min-height:100vh;line-height:1.55;transition:background .3s,color .3s;-webkit-font-smoothing:antialiased}
+
+.app{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+@media(max-width:900px){.app{grid-template-columns:1fr}}
+
+.sidebar{background:var(--sidebar);border-right:1px solid var(--borda);padding:1.5rem 1rem;position:sticky;top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column;gap:1.5rem;transition:background .3s,border-color .3s}
+@media(max-width:900px){.sidebar{position:fixed;z-index:50;width:260px;transform:translateX(-100%);transition:transform .3s;box-shadow:var(--sombra-forte)}.sidebar.aberta{transform:translateX(0)}}
+.marca{display:flex;align-items:center;gap:.75rem;padding:0 .5rem}
+.marca .logo{width:40px;height:40px;border-radius:12px;background:var(--grad-sol);display:grid;place-items:center;font-size:1.3rem;box-shadow:0 6px 16px rgba(255,159,28,.4)}
+.marca-texto{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.05rem;line-height:1.1;color:var(--texto)}
+.marca-texto small{display:block;font-size:.62rem;font-weight:500;color:var(--texto-suave);letter-spacing:1px;text-transform:uppercase}
+.nav-grupo{display:flex;flex-direction:column;gap:.25rem}
+.nav-grupo-titulo{font-size:.66rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--texto-suave);font-weight:700;padding:0 .75rem .5rem}
+.nav-item{display:flex;align-items:center;gap:.75rem;padding:.7rem .85rem;border-radius:10px;color:var(--texto-suave);text-decoration:none;font-size:.88rem;font-weight:500;cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:inherit;transition:all .2s}
+.nav-item:hover{background:var(--card-2);color:var(--texto)}
+.nav-item.ativo{background:var(--grad-sol);color:#1A1A2E;font-weight:700;box-shadow:0 6px 16px rgba(255,159,28,.3)}
+.nav-item .icone{width:20px;display:grid;place-items:center;font-size:1rem}
+.sidebar-rodape{margin-top:auto;padding-top:1rem;border-top:1px solid var(--borda);display:flex;flex-direction:column;gap:.5rem;font-size:.75rem;color:var(--texto-suave);text-align:center}
+
+.conteudo{display:flex;flex-direction:column;min-height:100vh;transition:background .3s}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 2rem;background:var(--card);border-bottom:1px solid var(--borda);position:sticky;top:0;z-index:20}
+@media(max-width:600px){.topbar{padding:.8rem 1rem}}
+.topbar-titulo{font-family:'Space Grotesk',sans-serif;font-size:1.2rem;font-weight:700;color:var(--texto)}
+.topbar-titulo small{display:block;font-family:'Inter',sans-serif;font-size:.72rem;color:var(--texto-suave);font-weight:500}
+.topbar-acoes{display:flex;gap:.5rem;align-items:center}
+.hamburguer{display:none;background:none;border:1px solid var(--borda);color:var(--texto);width:40px;height:40px;border-radius:10px;cursor:pointer;font-size:1.1rem}
+@media(max-width:900px){.hamburguer{display:grid;place-items:center}}
+.btn-icone{width:40px;height:40px;border-radius:10px;border:1px solid var(--borda);background:var(--card);color:var(--texto);cursor:pointer;display:grid;place-items:center;font-size:1.05rem;transition:all .2s}
+.btn-icone:hover{background:var(--card-2);transform:translateY(-1px)}
+.usuario-chip{display:flex;align-items:center;gap:.6rem;padding:.35rem .8rem .35rem .35rem;border-radius:30px;background:var(--card-2);border:1px solid var(--borda);cursor:pointer}
+.usuario-avatar{width:32px;height:32px;border-radius:50%;background:var(--grad-sol);display:grid;place-items:center;color:#1A1A2E;font-weight:800;font-size:.85rem}
+.usuario-chip .nome{font-size:.85rem;font-weight:600;color:var(--texto);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:600px){.usuario-chip .nome{display:none}}
+
+.views{flex:1;padding:2rem;max-width:1400px;width:100%;margin:0 auto}
+@media(max-width:600px){.views{padding:1.25rem}}
+.view{display:none;animation:viewEntrar .35s ease}
+.view.ativa{display:block}
+@keyframes viewEntrar{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.page-header{margin-bottom:1.75rem}
+.page-header h1{font-family:'Space Grotesk',sans-serif;font-size:1.75rem;font-weight:800;letter-spacing:-.5px;color:var(--texto)}
+.page-header p{color:var(--texto-suave);font-size:.95rem;margin-top:.25rem}
+
+.grid{display:grid;grid-template-columns:1fr;gap:1.25rem}
+@media(min-width:900px){.grid-2{grid-template-columns:1fr 1fr}.grid-3{grid-template-columns:repeat(3,1fr)}.grid-4{grid-template-columns:repeat(4,1fr)}.grid-2-1{grid-template-columns:2fr 1fr}.grid-1-2{grid-template-columns:1fr 2fr}}
+.full{grid-column:1/-1}
+
+.card{background:var(--card);border-radius:16px;padding:1.5rem;box-shadow:var(--sombra);border:1px solid var(--borda);transition:box-shadow .3s,transform .3s,background .3s}
+.card:hover{box-shadow:var(--sombra-forte)}
+.card-titulo{display:flex;align-items:center;gap:.65rem;font-family:'Space Grotesk',sans-serif;font-size:1.05rem;font-weight:700;color:var(--texto);margin-bottom:1.1rem;padding-bottom:.75rem;border-bottom:1px solid var(--borda)}
+.card-titulo .icone{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:1rem;background:var(--grad-sol);color:#1A1A2E;flex-shrink:0;box-shadow:0 4px 12px rgba(255,159,28,.3)}
+.card-titulo .icone.azul{background:var(--grad-ceu);color:#fff}
+.card-titulo .icone.verde{background:linear-gradient(135deg,#06D6A0,#04A87E);color:#fff}
+.card-titulo .icone.rosa{background:linear-gradient(135deg,#F72585,#B5179E);color:#fff}
+.card-titulo .icone.roxo{background:linear-gradient(135deg,#7209B7,#3A0CA3);color:#fff}
+.subtitulo{font-size:.85rem;color:var(--texto-suave);margin-bottom:1rem}
+
+.campo{margin-bottom:1rem}
+label{display:block;font-weight:600;font-size:.75rem;color:var(--texto-suave);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.4rem}
+input,select,textarea{width:100%;padding:.75rem 1rem;border:1.5px solid var(--borda);border-radius:10px;font-size:.95rem;font-family:inherit;color:var(--texto);background:var(--card-2);transition:all .2s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--sol-2);background:var(--card);box-shadow:0 0 0 4px rgba(255,159,28,.15)}
+
+.slider-wrap{display:flex;align-items:center;gap:1rem}
+input[type=range]{-webkit-appearance:none;appearance:none;height:10px;border-radius:5px;background:linear-gradient(90deg,#06D6A0 0%,#FFD93D 35%,#FF9F1C 65%,#EF476F 100%);padding:0;border:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:#fff;border:3px solid var(--sol-2);cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:#fff;border:3px solid var(--sol-2);cursor:pointer}
+.uv-valor{min-width:70px;text-align:center;font-weight:800;font-size:1.3rem;color:var(--sol-3);font-variant-numeric:tabular-nums}
+
+.fototipo-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:.5rem;margin-top:.5rem}
+.fototipo-opcao{cursor:pointer;border-radius:10px;padding:.55rem .25rem;text-align:center;border:2px solid var(--borda);background:var(--card-2);transition:all .2s;font-size:.65rem;font-weight:600;color:var(--texto-suave);font-family:inherit}
+.fototipo-opcao .cor{display:block;width:24px;height:24px;border-radius:50%;margin:0 auto .3rem;border:2px solid rgba(0,0,0,.1);box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.fototipo-opcao:hover{transform:translateY(-2px)}
+.fototipo-opcao.sel{border-color:var(--sol-2);background:linear-gradient(135deg,#FFF3D6,#FFE4B5);color:#1A1A2E;box-shadow:0 6px 16px rgba(255,159,28,.3)}
+[data-tema="escuro"] .fototipo-opcao.sel{background:linear-gradient(135deg,#4A3A10,#5C4814);color:#FFD93D}
+
+.btn{border:none;padding:.75rem 1.4rem;border-radius:10px;font-size:.9rem;font-weight:700;font-family:inherit;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;width:100%;letter-spacing:.2px}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-primario{background:var(--grad-sol);color:#1A1A2E;box-shadow:0 6px 20px rgba(255,159,28,.35)}
+.btn-primario:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 28px rgba(255,159,28,.5)}
+.btn-azul{background:var(--grad-ceu);color:#fff;box-shadow:0 6px 20px rgba(67,97,238,.35)}
+.btn-azul:hover:not(:disabled){transform:translateY(-2px)}
+.btn-perigo{background:linear-gradient(135deg,#EF476F,#B5179E);color:#fff;box-shadow:0 6px 20px rgba(239,71,111,.3)}
+.btn-perigo:hover:not(:disabled){transform:translateY(-2px)}
+.btn-verde{background:linear-gradient(135deg,#06D6A0,#04A87E);color:#fff;box-shadow:0 6px 20px rgba(6,214,160,.3)}
+.btn-verde:hover:not(:disabled){transform:translateY(-2px)}
+.btn-ghost{background:transparent;color:var(--texto);border:1.5px solid var(--borda)}
+.btn-ghost:hover{background:var(--card-2)}
+.btn-sm{padding:.5rem .9rem;font-size:.82rem}
+.botoes-linha{display:flex;gap:.6rem;margin-top:1rem;flex-wrap:wrap}
+.botoes-linha .btn{flex:1;min-width:140px}
+
+.alerta{margin-top:1rem;padding:.9rem 1.1rem;border-radius:12px;font-weight:600;font-size:.88rem;display:none;border-left:5px solid;animation:surgir .3s ease}
+.alerta.visivel{display:block}
+.alerta.baixo{background:rgba(6,214,160,.12);color:#04A87E;border-color:#06D6A0}
+.alerta.medio{background:rgba(255,217,61,.18);color:#B8860B;border-color:#FFD93D}
+.alerta.alto{background:rgba(255,107,53,.15);color:#C1440E;border-color:#FF6B35}
+.alerta.critico{background:rgba(239,71,111,.15);color:#B5179E;border-color:#EF476F}
+[data-tema="escuro"] .alerta.baixo{color:#06D6A0}
+[data-tema="escuro"] .alerta.medio{color:#FFD93D}
+[data-tema="escuro"] .alerta.alto{color:#FF9F1C}
+[data-tema="escuro"] .alerta.critico{color:#F72585}
+@keyframes surgir{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem}
+.kpi{background:var(--card);border-radius:14px;padding:1.1rem;border:1px solid var(--borda);transition:all .25s;position:relative;overflow:hidden;box-shadow:var(--sombra)}
+.kpi::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--grad-sol);transform:scaleX(0);transition:transform .3s;transform-origin:left}
+.kpi:hover{transform:translateY(-3px);box-shadow:var(--sombra-forte)}
+.kpi:hover::after{transform:scaleX(1)}
+.kpi .topo{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
+.kpi .topo span{font-size:.68rem;text-transform:uppercase;letter-spacing:1px;color:var(--texto-suave);font-weight:700}
+.kpi .topo .emoji{font-size:1.4rem}
+.kpi strong{display:block;font-size:1.7rem;font-weight:800;color:var(--texto);font-variant-numeric:tabular-nums;font-family:'Space Grotesk',sans-serif;line-height:1.1}
+.kpi small{color:var(--texto-suave);font-size:.78rem}
+
+.uv-medidor{position:relative;width:100%;max-width:340px;margin:0 auto;aspect-ratio:2/1;overflow:hidden}
+.uv-arco{position:absolute;inset:0;border-radius:340px 340px 0 0;background:conic-gradient(from -90deg at 50% 100%,#06D6A0 0deg,#A8E063 30deg,#FFD93D 60deg,#FF9F1C 90deg,#FF6B35 120deg,#EF476F 150deg,#B5179E 180deg);-webkit-mask:radial-gradient(circle at 50% 100%,transparent 55%,#000 56%);mask:radial-gradient(circle at 50% 100%,transparent 55%,#000 56%)}
+.uv-ponteiro{position:absolute;bottom:0;left:50%;width:4px;height:42%;background:var(--texto);border-radius:2px;transform-origin:bottom center;transform:translateX(-50%) rotate(-90deg);transition:transform .8s cubic-bezier(.34,1.56,.64,1);box-shadow:0 0 12px rgba(0,0,0,.3)}
+.uv-ponteiro::after{content:'';position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:16px;height:16px;border-radius:50%;background:var(--texto)}
+.uv-numero{position:absolute;bottom:12%;left:50%;transform:translateX(-50%);font-family:'Space Grotesk',sans-serif;font-size:2.2rem;font-weight:800;color:var(--texto);text-align:center}
+.uv-numero small{display:block;font-size:.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--texto-suave)}
+
+.crono-wrap{display:grid;place-items:center;padding:.5rem 0}
+.crono-circulo{width:230px;height:230px;position:relative;display:grid;place-items:center}
+.crono-circulo svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.crono-circulo circle{fill:none;stroke-width:8;stroke-linecap:round}
+.crono-bg{stroke:var(--borda)}
+.crono-prog{stroke:url(#gradCrono);stroke-dasharray:691;stroke-dashoffset:691;transition:stroke-dashoffset .5s linear}
+.crono-texto{text-align:center;z-index:2}
+.crono-texto .tempo{font-family:'Space Grotesk',sans-serif;font-size:2.2rem;font-weight:800;color:var(--texto);font-variant-numeric:tabular-nums;letter-spacing:-1px}
+.crono-texto .rotulo{font-size:.68rem;text-transform:uppercase;letter-spacing:2px;color:var(--texto-suave);font-weight:700}
+
+.barra-prog{width:100%;height:22px;background:var(--card-2);border-radius:11px;overflow:hidden;border:1px solid var(--borda);margin:.5rem 0}
+.barra-prog .fill{height:100%;background:var(--grad-sol);border-radius:11px;transition:width .6s,background .6s;display:flex;align-items:center;justify-content:flex-end;padding-right:.5rem;color:#1A1A2E;font-weight:800;font-size:.72rem;min-width:40px}
+.barra-prog .fill.ok{background:linear-gradient(90deg,#06D6A0,#04A87E);color:#fff}
+.barra-prog .fill.parcial{background:linear-gradient(90deg,#FFD93D,#FF9F1C)}
+.barra-prog .fill.baixo{background:linear-gradient(90deg,#EF476F,#B5179E);color:#fff}
+
+.lista-historico{max-height:480px;overflow-y:auto;padding-right:.5rem}
+.lista-historico::-webkit-scrollbar{width:6px}
+.lista-historico::-webkit-scrollbar-thumb{background:var(--borda);border-radius:3px}
+.item-hist{display:flex;align-items:center;gap:1rem;padding:.85rem 1rem;border-radius:12px;background:var(--card-2);margin-bottom:.55rem;border:1px solid var(--borda);transition:all .2s}
+.item-hist:hover{transform:translateX(4px);border-color:var(--sol-2)}
+.item-hist .bolha{width:42px;height:42px;border-radius:50%;background:var(--grad-sol);display:grid;place-items:center;font-size:1.15rem;flex-shrink:0}
+.item-hist .info{flex:1;min-width:0}
+.item-hist .info strong{display:block;font-size:.9rem;color:var(--texto)}
+.item-hist .info span{font-size:.76rem;color:var(--texto-suave)}
+.item-hist .valor{font-family:'Space Grotesk',sans-serif;font-weight:800;color:var(--sol-3);font-size:.95rem;text-align:right}
+.item-hist .valor small{display:block;font-size:.68rem;color:var(--texto-suave);font-weight:600}
+
+.vazio{text-align:center;padding:2rem 1rem;color:var(--texto-suave)}
+.vazio .emoji{font-size:3rem;display:block;margin-bottom:.5rem;opacity:.5}
+
+.conquistas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.85rem}
+.conquista{text-align:center;padding:1.2rem .8rem;border-radius:14px;background:var(--card-2);border:1.5px solid var(--borda);opacity:.45;filter:grayscale(1);transition:all .3s}
+.conquista.desbloqueada{opacity:1;filter:none;border-color:var(--sol-2);background:linear-gradient(135deg,rgba(255,217,61,.15),rgba(255,159,28,.1));box-shadow:0 8px 24px rgba(255,159,28,.2)}
+.conquista .emoji{font-size:2rem;display:block;margin-bottom:.4rem}
+.conquista strong{display:block;font-size:.85rem;color:var(--texto)}
+.conquista small{font-size:.72rem;color:var(--texto-suave)}
+
+.tabela{width:100%;border-collapse:collapse;font-size:.88rem}
+.tabela th,.tabela td{padding:.7rem .8rem;text-align:left;border-bottom:1px solid var(--borda)}
+.tabela th{font-size:.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--texto-suave);font-weight:700}
+.tabela tr:hover td{background:var(--card-2)}
+
+.info-lista{display:flex;flex-direction:column;gap:.6rem}
+.info-linha{display:flex;justify-content:space-between;align-items:center;padding:.7rem 0;border-bottom:1px dashed var(--borda);font-size:.9rem}
+.info-linha:last-child{border-bottom:none}
+.info-linha span{color:var(--texto-suave)}
+.info-linha strong{color:var(--texto);font-weight:700}
+
+.sobre-bloco{background:var(--card-2);border-radius:14px;padding:1.25rem;border-left:4px solid var(--sol-2);margin-bottom:1rem}
+.sobre-bloco h3{font-family:'Space Grotesk',sans-serif;font-size:1rem;margin-bottom:.4rem;color:var(--texto)}
+.sobre-bloco p{font-size:.9rem;color:var(--texto-suave)}
+
+@media(max-width:600px){.fototipo-grid{grid-template-columns:repeat(3,1fr)}.page-header h1{font-size:1.4rem}}
+
+.toast-container{position:fixed;top:1.5rem;right:1.5rem;z-index:200;display:flex;flex-direction:column;gap:.6rem}
+.toast{background:var(--card);border-radius:12px;padding:.9rem 1.2rem;box-shadow:var(--sombra-forte);border-left:4px solid var(--sol-2);display:flex;align-items:center;gap:.7rem;min-width:260px;max-width:380px;font-size:.9rem;font-weight:600;color:var(--texto);animation:toastEntrar .35s cubic-bezier(.34,1.56,.64,1)}
+.toast.sucesso{border-left-color:var(--verde)}
+.toast.erro{border-left-color:var(--vermelho)}
+.toast.info{border-left-color:var(--ceu-2)}
+@keyframes toastEntrar{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+canvas{max-height:320px}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="marca">
+      <div class="logo">☀️</div>
+      <div class="marca-texto">
+        SunSafe
+        <small>Monitor Solar</small>
+      </div>
+    </div>
+
+    <nav class="nav-grupo">
+      <div class="nav-grupo-titulo">Principal</div>
+      <button class="nav-item ativo" data-view="dashboard"><span class="icone">📊</span> Painel</button>
+      <button class="nav-item" data-view="perfil"><span class="icone">👤</span> Meu Perfil</button>
+      <button class="nav-item" data-view="exposicao"><span class="icone">⏱️</span> Exposição</button>
+      <button class="nav-item" data-view="uv"><span class="icone">🌡️</span> Índice UV</button>
+    </nav>
+
+    <nav class="nav-grupo">
+      <div class="nav-grupo-titulo">Análise</div>
+      <button class="nav-item" data-view="historico"><span class="icone">📜</span> Histórico</button>
+      <button class="nav-item" data-view="relatorios"><span class="icone">📈</span> Relatórios</button>
+      <button class="nav-item" data-view="conquistas"><span class="icone">🏆</span> Conquistas</button>
+    </nav>
+
+    <nav class="nav-grupo">
+      <div class="nav-grupo-titulo">Sistema</div>
+      <button class="nav-item" data-view="sobre"><span class="icone">ℹ️</span> Sobre</button>
+    </nav>
+
+    <div class="sidebar-rodape">
+      <div>SunSafe v1.0</div>
+      <div>Dados salvos localmente</div>
+    </div>
+  </aside>
+
+  <div class="conteudo">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:.75rem">
+        <button class="hamburguer" id="btnMenu">☰</button>
+        <div class="topbar-titulo" id="topbarTitulo">Painel<small id="topbarSub">Visão geral da sua exposição solar</small></div>
+      </div>
+      <div class="topbar-acoes">
+        <button class="btn-icone" id="btnTema" title="Alternar tema">🌙</button>
+        <div class="usuario-chip" id="usuarioChip">
+          <div class="usuario-avatar" id="avatarIniciais">?</div>
+          <div class="nome" id="nomeUsuario">Visitante</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="views">
+
+      <!-- DASHBOARD -->
+      <section class="view ativa" id="view-dashboard">
+        <div class="page-header">
+          <h1>Painel Principal</h1>
+          <p>Resumo do seu perfil e das suas exposições solares.</p>
+        </div>
+
+        <div class="kpi-grid" style="margin-bottom:1.25rem">
+          <div class="kpi"><div class="topo"><span>Exposições</span><span class="emoji">☀️</span></div><strong id="kpiTotal">0</strong><small>sessões registradas</small></div>
+          <div class="kpi"><div class="topo"><span>Tempo total</span><span class="emoji">⏱️</span></div><strong id="kpiMinutos">0 min</strong><small>ao sol</small></div>
+          <div class="kpi"><div class="topo"><span>Vitamina D</span><span class="emoji">🧬</span></div><strong id="kpiVitD">0 UI</strong><small>estimativa acumulada</small></div>
+          <div class="kpi"><div class="topo"><span>Fototipo</span><span class="emoji">🎨</span></div><strong id="kpiFototipo">—</strong><small id="kpiFototipoTxt">não definido</small></div>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="card-titulo"><div class="icone azul">📊</div>Últimas exposições</div>
+            <div id="dashboardHistorico"></div>
+          </div>
+          <div class="card">
+            <div class="card-titulo"><div class="icone verde">🎯</div>Meta semanal de Vitamina D</div>
+            <p class="subtitulo">Recomendação: 600 UI/dia para adultos.</p>
+            <div class="barra-prog"><div class="fill" id="metaFill" style="width:0%">0%</div></div>
+            <div class="info-lista" style="margin-top:1rem">
+              <div class="info-linha"><span>Média diária</span><strong id="metaMedia">0 UI</strong></div>
+              <div class="info-linha"><span>Total da semana</span><strong id="metaTotal">0 UI</strong></div>
+              <div class="info-linha"><span>Status</span><strong id="metaStatus">—</strong></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PERFIL -->
+      <section class="view" id="view-perfil">
+        <div class="page-header"><h1>Meu Perfil</h1><p>Informe seus dados para cálculos personalizados.</p></div>
+
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="card-titulo"><div class="icone">👤</div>Dados pessoais</div>
+            <div class="campo"><label for="nome">Nome</label><input type="text" id="nome" placeholder="Digite seu nome" /></div>
+            <div class="campo"><label for="idade">Idade</label><input type="number" id="idade" placeholder="Ex.: 30" min="1" max="120" /></div>
+            <div class="campo"><label for="cidade">Cidade</label><input type="text" id="cidade" placeholder="Ex.: São Paulo" /></div>
+            <div class="campo">
+              <label>Sensibilidade solar</label>
+              <select id="sensibilidade">
+                <option value="alta">Alta</option>
+                <option value="media" selected>Média</option>
+                <option value="baixa">Baixa</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-titulo"><div class="icone rosa">🎨</div>Fototipo de pele</div>
+            <p class="subtitulo">Escolha o tom que mais se aproxima da sua pele (escala de Fitzpatrick).</p>
+            <div class="fototipo-grid" id="fototipoGrid">
+              <button class="fototipo-opcao" data-ft="1"><span class="cor" style="background:#FDE7D3"></span>I<br>Muito clara</button>
+              <button class="fototipo-opcao" data-ft="2"><span class="cor" style="background:#F5D0AE"></span>II<br>Clara</button>
+              <button class="fototipo-opcao sel" data-ft="3"><span class="cor" style="background:#E8B98C"></span>III<br>Média</button>
+              <button class="fototipo-opcao" data-ft="4"><span class="cor" style="background:#C68B59"></span>IV<br>Morena clara</button>
+              <button class="fototipo-opcao" data-ft="5"><span class="cor" style="background:#8B5A2B"></span>V<br>Morena escura</button>
+              <button class="fototipo-opcao" data-ft="6"><span class="cor" style="background:#4A2C17"></span>VI<br>Negra</button>
+            </div>
+            <div class="botoes-linha" style="margin-top:1.5rem">
+              <button class="btn btn-primario" id="btnSalvarPerfil">💾 Salvar perfil</button>
+            </div>
+            <div class="alerta" id="alertaPerfil"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- EXPOSIÇÃO -->
+      <section class="view" id="view-exposicao">
+        <div class="page-header"><h1>Registro de Exposição</h1><p>Cronometre seu tempo ao sol e registre a sessão.</p></div>
+
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="card-titulo"><div class="icone">⏱️</div>Cronômetro</div>
+
+            <div class="crono-wrap">
+              <div class="crono-circulo">
+                <svg viewBox="0 0 230 230">
+                  <defs>
+                    <linearGradient id="gradCrono" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#FFD93D"/>
+                      <stop offset="50%" stop-color="#FF9F1C"/>
+                      <stop offset="100%" stop-color="#FF6B35"/>
+                    </linearGradient>
+                  </defs>
+                  <circle class="crono-bg" cx="115" cy="115" r="110"></circle>
+                  <circle class="crono-prog" id="cronoProg" cx="115" cy="115" r="110"></circle>
+                </svg>
+                <div class="crono-texto">
+                  <div class="tempo" id="cronometro">00:00:00</div>
+                  <div class="rotulo">Tempo ao sol</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="botoes-linha">
+              <button class="btn btn-verde" id="btnIniciar">▶ Iniciar</button>
+              <button class="btn btn-perigo" id="btnParar" disabled>⏹ Parar e salvar</button>
+            </div>
+            <div class="botoes-linha">
+              <button class="btn btn-ghost btn-sm" id="btnResetar">🔄 Resetar cronômetro</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-titulo"><div class="icone verde">🧬</div>Estimativa de Vitamina D</div>
+            <p class="subtitulo">Calculada automaticamente ao final da sessão, considerando fototipo e Índice UV.</p>
+
+            <div class="info-lista">
+              <div class="info-linha"><span>Última exposição</span><strong id="ultimaExp">—</strong></div>
+              <div class="info-linha"><span>Vitamina D gerada</span><strong id="vitDGerada">—</strong></div>
+              <div class="info-linha"><span>Índice UV usado</span><strong id="uvUsado">—</strong></div>
+              <div class="info-linha"><span>Status</span><strong id="statusVitD">—</strong></div>
+            </div>
+
+            <div class="barra-prog" style="margin-top:1.25rem">
+              <div class="fill" id="vitDFill" style="width:0%">0%</div>
+            </div>
+            <p class="subtitulo" style="margin-top:.5rem">Meta diária: 600 UI</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- UV -->
+      <section class="view" id="view-uv">
+        <div class="page-header"><h1>Índice UV</h1><p>Simule o Índice UV local e veja o alerta personalizado.</p></div>
+
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="card-titulo"><div class="icone">🌡️</div>Ajuste o Índice UV</div>
+            <div class="slider-wrap">
+              <input type="range" id="uvRange" min="0" max="12" step="1" value="6" />
+              <div class="uv-valor" id="uvValor">6</div>
+            </div>
+            <p class="subtitulo" style="margin-top:.5rem">0 = noite · 3 = baixo · 6 = alto · 11+ = extremo</p>
+            <div class="botoes-linha">
+              <button class="btn btn-azul" id="btnVerificarUV">🔔 Verificar alerta</button>
+            </div>
+            <div class="alerta" id="alertaUV"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-titulo"><div class="icone rosa">🎯</div>Medidor</div>
+            <div class="uv-medidor">
+              <div class="uv-arco"></div>
+              <div class="uv-ponteiro" id="uvPonteiro"></div>
+              <div class="uv-numero" id="uvNumeroMedidor">6<small>Índice UV</small></div>
+            </div>
+            <div class="info-lista" style="margin-top:1.5rem">
+              <div class="info-linha"><span>Tempo seguro estimado</span><strong id="tempoSeguroUV">—</strong></div>
+              <div class="info-linha"><span>Vitamina D em 30 min</span><strong id="vitD30min">—</strong></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- HISTÓRICO -->
+      <section class="view" id="view-historico">
+        <div class="page-header"><h1>Histórico de Exposições</h1><p>Todas as sessões registradas.</p></div>
+        <div class="card">
+          <div class="card-titulo">
+            <div class="icone azul">📜</div>Registros
+            <button class="btn btn-ghost btn-sm" id="btnLimparHistorico" style="width:auto;margin-left:auto">🗑️ Limpar tudo</button>
+          </div>
+          <div class="lista-historico" id="listaHistorico"></div>
+        </div>
+      </section>
+
+      <!-- RELATÓRIOS -->
+      <section class="view" id="view-relatorios">
+        <div class="page-header"><h1>Relatórios</h1><p>Análise visual da sua exposição solar.</p></div>
+        <div class="grid">
+          <div class="card">
+            <div class="card-titulo"><div class="icone verde">📈</div>Minutos ao sol por sessão</div>
+            <canvas id="graficoMinutos"></canvas>
+          </div>
+          <div class="card">
+            <div class="card-titulo"><div class="icone roxo">🧬</div>Vitamina D por sessão</div>
+            <canvas id="graficoVitD"></canvas>
+          </div>
+          <div class="card">
+            <div class="card-titulo"><div class="icone azul">📋</div>Tabela de sessões</div>
+            <div style="overflow-x:auto">
+              <table class="tabela" id="tabelaRelatorio">
+                <thead><tr><th>#</th><th>Data</th><th>Duração</th><th>UV</th><th>Vitamina D</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CONQUISTAS -->
+      <section class="view" id="view-conquistas">
+        <div class="page-header"><h1>Conquistas</h1><p>Desbloqueie metas conforme registra suas exposições.</p></div>
+        <div class="card">
+          <div class="card-titulo"><div class="icone">🏆</div>Suas medalhas</div>
+          <div class="conquistas-grid" id="conquistasGrid"></div>
+        </div>
+      </section>
+
+      <!-- SOBRE -->
+      <section class="view" id="view-sobre">
+        <div class="page-header"><h1>Sobre o SunSafe</h1><p>Informações, fundamentação e recomendações.</p></div>
+
+        <div class="grid grid-2">
+          <div class="card">
+            <div class="card-titulo"><div class="icone">ℹ️</div>Objetivo</div>
+            <div class="sobre-bloco"><h3>Saúde preventiva</h3><p>O SunSafe ajuda a equilibrar os benefícios da exposição solar (síntese de Vitamina D) com os riscos da radiação ultravioleta (queimaduras, envelhecimento precoce e câncer de pele).</p></div>
+            <div class="sobre-bloco"><h3>Personalização</h3><p>Os cálculos consideram o fototipo de pele, a sensibilidade individual e o Índice UV local.</p></div>
+            <div class="sobre-bloco"><h3>Privacidade</h3><p>Todos os dados ficam salvos apenas no seu navegador (localStorage). Nada é enviado para servidores externos.</p></div>
+          </div>
+
+          <div class="card">
+            <div class="card-titulo"><div class="icone verde">📚</div>Recomendações</div>
+            <div class="sobre-bloco"><h3>Fototipos I e II</h3><p>Peles muito claras: maior risco de queimadura. Prefira horários antes das 10h e após as 16h, use protetor solar FPS 50+ e roupas de proteção.</p></div>
+            <div class="sobre-bloco"><h3>Fototipos III e IV</h3><p>Peles médias: exposição moderada. 15–30 min de sol diário costumam ser suficientes para Vitamina D.</p></div>
+            <div class="sobre-bloco"><h3>Fototipos V e VI</h3><p>Peles mais escuras: maior fotoproteção natural, mas exigem mais tempo de exposição para sintetizar Vitamina D.</p></div>
+            <div class="sobre-bloco"><h3>Atenção</h3><p>Este sistema é informativo e não substitui orientação médica ou dermatológica.</p></div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+/* ============================================================
+   ESTADO / PERSISTÊNCIA
+   ============================================================ */
+const STORAGE = 'sunsafe_v1';
+let estado = {
+  perfil: null,
+  historico: [],
+  cronoAtivo: false,
+  cronoInicio: null,
+  cronoInterval: null,
+  cronoSegundos: 0,
+  uvAtual: 6,
+  tema: 'claro'
+};
+
+function carregar() {
+  try {
+    const raw = localStorage.getItem(STORAGE);
+    if (raw) {
+      const d = JSON.parse(raw);
+      estado.perfil = d.perfil || null;
+      estado.historico = d.historico || [];
+      estado.tema = d.tema || 'claro';
+    }
+  } catch(e) { console.warn(e); }
+}
+function salvar() {
+  localStorage.setItem(STORAGE, JSON.stringify({
+    perfil: estado.perfil,
+    historico: estado.historico,
+    tema: estado.tema
+  }));
+}
+
+/* ============================================================
+   UTILITÁRIOS
+   ============================================================ */
+const $ = id => document.getElementById(id);
+
+function toast(msg, tipo='info') {
+  const el = document.createElement('div');
+  el.className = 'toast ' + tipo;
+  el.innerHTML = `<span>${tipo==='sucesso'?'✅':tipo==='erro'?'⚠️':'ℹ️'}</span> ${msg}`;
+  $('toastContainer').appendChild(el);
+  setTimeout(() => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(120%)';
+    el.style.transition = 'all .35s';
+    setTimeout(() => el.remove(), 350);
+  }, 3200);
+}
+
+function formatarTempo(seg) {
+  const h = String(Math.floor(seg/3600)).padStart(2,'0');
+  const m = String(Math.floor((seg%3600)/60)).padStart(2,'0');
+  const s = String(seg%60).padStart(2,'0');
+  return `${h}:${m}:${s}`;
+}
+function formatarData(d = new Date()) {
+  return d.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+/* ============================================================
+   NAVEGAÇÃO
+   ============================================================ */
+const titulos = {
+  dashboard: ['Painel', 'Visão geral da sua exposição solar'],
+  perfil: ['Meu Perfil', 'Dados pessoais e fototipo de pele'],
+  exposicao: ['Exposição', 'Cronômetro e estimativa de Vitamina D'],
+  uv: ['Índice UV', 'Simule o índice e veja alertas personalizados'],
+  historico: ['Histórico', 'Todas as sessões registradas'],
+  relatorios: ['Relatórios', 'Gráficos e tabelas analíticas'],
+  conquistas: ['Conquistas', 'Medalhas desbloqueadas'],
+  sobre: ['Sobre o SunSafe', 'Informações e recomendações']
+};
+
+function navegar(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('ativa'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('ativo'));
+  const el = $('view-' + view);
+  if (el) el.classList.add('ativa');
+  const nav = document.querySelector(`.nav-item[data-view="${view}"]`);
+  if (nav) nav.classList.add('ativo');
+  const [t, s] = titulos[view] || ['Painel',''];
+  $('topbarTitulo').innerHTML = `${t}<small>${s}</small>`;
+  $('sidebar').classList.remove('aberta');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  if (view === 'relatorios') atualizarGraficos();
+  if (view === 'conquistas') atualizarConquistas();
+  if (view === 'historico') atualizarHistorico();
+}
+
+document.querySelectorAll('.nav-item').forEach(btn => {
+  btn.addEventListener('click', () => navegar(btn.dataset.view));
+});
+
+$('btnMenu').addEventListener('click', () => $('sidebar').classList.toggle('aberta'));
+$('usuarioChip').addEventListener('click', () => navegar('perfil'));
+
+/* ============================================================
+   TEMA
+   ============================================================ */
+function aplicarTema() {
+  document.documentElement.setAttribute('data-tema', estado.tema);
+  $('btnTema').textContent = estado.tema === 'escuro' ? '☀️' : '🌙';
+}
+$('btnTema').addEventListener('click', () => {
+  estado.tema = estado.tema === 'escuro' ? 'claro' : 'escuro';
+  aplicarTema();
+  salvar();
+});
+
+/* ============================================================
+   PERFIL
+   ============================================================ */
+let fototipoSel = 3;
+
+document.querySelectorAll('.fototipo-opcao').forEach(op => {
+  op.addEventListener('click', () => {
+    document.querySelectorAll('.fototipo-opcao').forEach(o => o.classList.remove('sel'));
+    op.classList.add('sel');
+    fototipoSel = parseInt(op.dataset.ft);
+  });
+});
+
+$('btnSalvarPerfil').addEventListener('click', () => {
+  const nome = $('nome').value.trim();
+  const idade = parseInt($('idade').value) || null;
+  const cidade = $('cidade').value.trim();
+  const sensibilidade = $('sensibilidade').value;
+
+  if (!nome) { toast('Informe seu nome para salvar o perfil.', 'erro'); return; }
+  if (!idade || idade < 1 || idade > 120) { toast('Informe uma idade válida.', 'erro'); return; }
+
+  estado.perfil = { nome, idade, cidade, sensibilidade, fototipo: fototipoSel };
+  salvar();
+  atualizarInterfaceUsuario();
+  atualizarDashboard();
+  atualizarInfoUV();
+  toast('Perfil salvo com sucesso!', 'sucesso');
+  mostrarAlerta('alertaPerfil', '✅ Perfil atualizado.', 'baixo');
+});
+
+function mostrarAlerta(id, texto, nivel) {
+  const el = $(id);
+  el.textContent = texto;
+  el.className = 'alerta visivel ' + nivel;
+  setTimeout(() => el.classList.remove('visivel'), 4000);
+}
+
+function atualizarInterfaceUsuario() {
+  if (estado.perfil) {
+    $('nomeUsuario').textContent = estado.perfil.nome;
+    $('avatarIniciais').textContent = estado.perfil.nome.charAt(0).toUpperCase();
+    $('nome').value = estado.perfil.nome;
+    $('idade').value = estado.perfil.idade || '';
+    $('cidade').value = estado.perfil.cidade || '';
+    $('sensibilidade').value = estado.perfil.sensibilidade;
+    fototipoSel = estado.perfil.fototipo;
+    document.querySelectorAll('.fototipo-opcao').forEach(o => {
+      o.classList.toggle('sel', parseInt(o.dataset.ft) === fototipoSel);
+    });
+  } else {
+    $('nomeUsuario').textContent = 'Visitante';
+    $('avatarIniciais').textContent = '?';
+  }
+}
+
+/* ============================================================
+   CÁLCULOS
+   ============================================================ */
+function calcularTempoSeguro(fototipo, uv, sensibilidade) {
+  const base = { 1:10, 2:15, 3:25, 4:40, 5:60, 6:90 }[fototipo] || 20;
+  let t = base;
+  if (sensibilidade === 'alta') t *= 0.7;
+  if (sensibilidade === 'baixa') t *= 1.3;
+  const fator = uv <= 2 ? 1.5 : uv <= 5 ? 1 : uv <= 7 ? 0.6 : uv <= 10 ? 0.35 : 0.2;
+  return Math.max(3, Math.round(t * fator));
+}
+
+function estimarVitaminaD(fototipo, minutos, uv) {
+  const taxa = { 1:25, 2:20, 3:15, 4:10, 5:7, 6:5 }[fototipo] || 12;
+  const fatorUV = Math.min(1, uv / 6);
+  return Math.round(taxa * minutos * fatorUV);
+}
+
+/* ============================================================
+   UV
+   ============================================================ */
+$('uvRange').addEventListener('input', e => {
+  const v = parseInt(e.target.value);
+  estado.uvAtual = v;
+  $('uvValor').textContent = v;
+  $('uvNumeroMedidor').innerHTML = v + '<small>Índice UV</small>';
+  const ang = -90 + (v / 12) * 180;
+  $('uvPonteiro').style.transform = `translateX(-50%) rotate(${ang}deg)`;
+  atualizarInfoUV();
+});
+
+function atualizarInfoUV() {
+  if (!estado.perfil) {
+    $('tempoSeguroUV').textContent = '—';
+    $('vitD30min').textContent = '—';
+    return;
+  }
+  const { fototipo, sensibilidade } = estado.perfil;
+  const t = calcularTempoSeguro(fototipo, estado.uvAtual, sensibilidade);
+  const v = estimarVitaminaD(fototipo, 30, estado.uvAtual);
+  $('tempoSeguroUV').textContent = t + ' min';
+  $('vitD30min').textContent = v + ' UI';
+}
+
+$('btnVerificarUV').addEventListener('click', () => {
+  if (!estado.perfil) { toast('Cadastre seu perfil primeiro.', 'erro'); return; }
+  const uv = estado.uvAtual;
+  const { fototipo, sensibilidade } = estado.perfil;
+  const t = calcularTempoSeguro(fototipo, uv, sensibilidade);
+  let nivel, msg;
+
+  if (uv <= 2) { nivel='baixo'; msg=`☀️ UV baixo (${uv}). Exposição segura. Tempo recomendado: ${t} min.`; }
+  else if (uv <= 5) { nivel='medio'; msg=`🌤️ UV moderado (${uv}). Use proteção. Limite: ${t} min.`; }
+  else if (uv <= 7) { nivel='alto'; msg=`⚠️ UV alto (${uv}). Proteção obrigatória. Limite: ${t} min.`; }
+  else { nivel='critico'; msg=`🚨 UV muito alto (${uv}). Evite exposição. Limite: ${t} min.`; }
+
+  if (fototipo <= 2) msg += ' Sua pele é muito sensível — redobre o cuidado.';
+  if (fototipo >= 5) msg += ' Sua pele tolera mais, mas exige mais tempo para Vitamina D.';
+
+  mostrarAlerta('alertaUV', msg, nivel);
+  atualizarInfoUV();
+});
+
+/* ============================================================
+   CRONÔMETRO (CORRIGIDO)
+   ============================================================ */
+
+function atualizarDisplayCrono() {
+  $('cronometro').textContent = formatarTempo(estado.cronoSegundos);
+  const pct = Math.min(1, estado.cronoSegundos / 3600);
+  $('cronoProg').style.strokeDashoffset = 691 * (1 - pct);
+}
+
+function resetarCrono() {
+  if (estado.cronoInterval) {
+    clearInterval(estado.cronoInterval);
+    estado.cronoInterval = null;
+  }
+  estado.cronoAtivo = false;
+  estado.cronoInicio = null;
+  estado.cronoSegundos = 0;
+  atualizarDisplayCrono();
+  $('btnIniciar').disabled = false;
+  $('btnParar').disabled = true;
+  $('btnIniciar').textContent = '▶ Iniciar';
+}
+
+$('btnIniciar').addEventListener('click', () => {
+  if (estado.cronoAtivo) return;
+  if (!estado.perfil) {
+    toast('Cadastre seu perfil antes de iniciar.', 'erro');
+    navegar('perfil');
+    return;
+  }
+
+  estado.cronoInicio = Date.now() - (estado.cronoSegundos * 1000);
+  estado.cronoAtivo = true;
+
+  estado.cronoInterval = setInterval(() => {
+    estado.cronoSegundos = Math.floor((Date.now() - estado.cronoInicio) / 1000);
+    atualizarDisplayCrono();
+  }, 250);
+
+  $('btnIniciar').disabled = true;
+  $('btnParar').disabled = false;
+  $('btnIniciar').textContent = '▶ Em andamento...';
+  toast('Cronômetro iniciado.', 'info');
+});
+
+$('btnParar').addEventListener('click', () => {
+  if (!estado.cronoAtivo) return;
+
+  clearInterval(estado.cronoInterval);
+  estado.cronoInterval = null;
+  estado.cronoAtivo = false;
+
+  const duracao = Math.floor((Date.now() - estado.cronoInicio) / 1000);
+  estado.cronoSegundos = duracao;
+
+  if (duracao < 5) {
+    toast('Sessão muito curta (mínimo 5 segundos).', 'erro');
+    resetarCrono();
+    return;
+  }
+
+  const uv = estado.uvAtual;
+  const fototipo = estado.perfil.fototipo;
+  const minutos = duracao / 60;
+  const vitD = estimarVitaminaD(fototipo, minutos, uv);
+
+  const registro = {
+    id: Date.now(),
+    data: formatarData(),
+    duracao,
+    uv,
+    vitD
+  };
+  estado.historico.push(registro);
+  salvar();
+
+  $('ultimaExp').textContent = formatarTempo(duracao);
+  $('vitDGerada').textContent = vitD + ' UI';
+  $('uvUsado').textContent = uv;
+  const status = vitD >= 600 ? '✅ Adequada' : vitD >= 400 ? '⚠️ Parcial' : '❌ Baixa';
+  $('statusVitD').textContent = status;
+
+  const pct = Math.min(100, Math.round((vitD / 600) * 100));
+  const fill = $('vitDFill');
+  fill.style.width = pct + '%';
+  fill.textContent = pct + '%';
+  fill.className = 'fill ' + (pct >= 100 ? 'ok' : pct >= 60 ? 'parcial' : 'baixo');
+
+  toast(`Sessão registrada: ${vitD} UI de Vitamina D.`, 'sucesso');
+
+  atualizarDashboard();
+  atualizarHistorico();
+
+  resetarCrono();
+});
+
+$('btnResetar').addEventListener('click', () => {
+  if (estado.cronoAtivo) {
+    clearInterval(estado.cronoInterval);
+    estado.cronoInterval = null;
+    estado.cronoAtivo = false;
+  }
+  resetarCrono();
+  toast('Cronômetro resetado.', 'info');
+});
+
+/* ============================================================
+   HISTÓRICO
+   ============================================================ */
+function atualizarHistorico() {
+  const lista = $('listaHistorico');
+  if (!estado.historico.length) {
+    lista.innerHTML = `<div class="vazio"><span class="emoji">🌤️</span>Nenhuma exposição registrada ainda.</div>`;
+    return;
+  }
+  lista.innerHTML = estado.historico.slice().reverse().map(r => `
+    <div class="item-hist">
+      <div class="bolha">☀️</div>
+      <div class="info">
+        <strong>${r.data}</strong>
+        <span>UV ${r.uv} · ${formatarTempo(r.duracao)}</span>
+      </div>
+      <div class="valor">${r.vitD} UI<small>Vitamina D</small></div>
+    </div>
+  `).join('');
+}
+
+$('btnLimparHistorico').addEventListener('click', () => {
+  if (!estado.historico.length) return;
+  if (!confirm('Apagar todo o histórico? Esta ação não pode ser desfeita.')) return;
+  estado.historico = [];
+  salvar();
+  atualizarHistorico();
+  atualizarDashboard();
+  toast('Histórico apagado.', 'info');
+});
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+function atualizarDashboard() {
+  const total = estado.historico.length;
+  const minutos = estado.historico.reduce((a,r) => a + r.duracao/60, 0);
+  const vitDTotal = estado.historico.reduce((a,r) => a + r.vitD, 0);
+
+  $('kpiTotal').textContent = total;
+  $('kpiMinutos').textContent = Math.round(minutos) + ' min';
+  $('kpiVitD').textContent = vitDTotal + ' UI';
+
+  if (estado.perfil) {
+    $('kpiFototipo').textContent = 'Tipo ' + estado.perfil.fototipo;
+    const nomes = {1:'Muito clara',2:'Clara',3:'Média',4:'Morena clara',5:'Morena escura',6:'Negra'};
+    $('kpiFototipoTxt').textContent = nomes[estado.perfil.fototipo];
+  } else {
+    $('kpiFototipo').textContent = '—';
+    $('kpiFototipoTxt').textContent = 'não definido';
+  }
+
+  const meta = 600 * 7;
+  const pct = Math.min(100, Math.round((vitDTotal / meta) * 100));
+  const fill = $('metaFill');
+  fill.style.width = pct + '%';
+  fill.textContent = pct + '%';
+  fill.className = 'fill ' + (pct >= 100 ? 'ok' : pct >= 60 ? 'parcial' : 'baixo');
+
+  $('metaMedia').textContent = Math.round(vitDTotal / 7) + ' UI';
+  $('metaTotal').textContent = vitDTotal + ' UI';
+  $('metaStatus').textContent = pct >= 100 ? '✅ Meta atingida' : pct >= 60 ? '⚠️ Quase lá' : '❌ Abaixo';
+
+  const dash = $('dashboardHistorico');
+  const ult = estado.historico.slice(-3).reverse();
+  if (!ult.length) {
+    dash.innerHTML = `<div class="vazio"><span class="emoji">🌱</span>Comece registrando uma exposição.</div>`;
+  } else {
+    dash.innerHTML = ult.map(r => `
+      <div class="item-hist">
+        <div class="bolha">☀️</div>
+        <div class="info">
+          <strong>${r.data}</strong>
+          <span>UV ${r.uv} · ${formatarTempo(r.duracao)}</span>
+        </div>
+        <div class="valor">${r.vitD} UI<small>Vit D</small></div>
+      </div>
+    `).join('');
+  }
+}
+
+/* ============================================================
+   GRÁFICOS
+   ============================================================ */
+let gMin = null, gVit = null;
+
+function atualizarGraficos() {
+  const labels = estado.historico.map((_,i) => `#${i+1}`);
+  const minutos = estado.historico.map(r => Math.round(r.duracao/60));
+  const vitD = estado.historico.map(r => r.vitD);
+
+  if (gMin) gMin.destroy();
+  if (gVit) gVit.destroy();
+
+  gMin = new Chart($('graficoMinutos'), {
+    type: 'line',
+    data: {
+      labels: labels.length ? labels : ['Sem dados'],
+      datasets: [{
+        label: 'Minutos',
+        data: minutos.length ? minutos : [0],
+        borderColor: '#FF9F1C',
+        backgroundColor: 'rgba(255,159,28,.15)',
+        fill: true, tension: .35,
+        pointBackgroundColor: '#FF6B35',
+        pointRadius: 5
+      }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+
+  gVit = new Chart($('graficoVitD'), {
+    type: 'bar',
+    data: {
+      labels: labels.length ? labels : ['Sem dados'],
+      datasets: [{
+        label: 'UI de Vitamina D',
+        data: vitD.length ? vitD : [0],
+        backgroundColor: 'rgba(6,214,160,.7)',
+        borderColor: '#06D6A0',
+        borderWidth: 2, borderRadius: 6
+      }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+
+  const tbody = $('tabelaRelatorio').querySelector('tbody');
+  if (!estado.historico.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--texto-suave);padding:1.5rem">Sem dados</td></tr>`;
+  } else {
+    tbody.innerHTML = estado.historico.map((r,i) => `
+      <tr>
+        <td>${i+1}</td>
+        <td>${r.data}</td>
+        <td>${formatarTempo(r.duracao)}</td>
+        <td>${r.uv}</td>
+        <td><strong style="color:var(--sol-3)">${r.vitD} UI</strong></td>
+      </tr>
+    `).join('');
+  }
+}
+
+/* ============================================================
+   CONQUISTAS
+   ============================================================ */
+const conquistas = [
+  { id: 'primeiro', emoji: '🌱', titulo: 'Primeiro passo', desc: 'Registre 1 exposição', check: s => s.total >= 1 },
+  { id: 'cinco', emoji: '☀️', titulo: 'Constância', desc: '5 exposições', check: s => s.total >= 5 },
+  { id: 'dez', emoji: '🔥', titulo: 'Disciplinado', desc: '10 exposições', check: s => s.total >= 10 },
+  { id: 'umaHora', emoji: '⏱️', titulo: 'Uma hora', desc: '60 min acumulados', check: s => s.minutos >= 60 },
+  { id: 'vitD600', emoji: '🧬', titulo: 'Vitamina D', desc: '600 UI em uma sessão', check: s => s.maxVitD >= 600 },
+  { id: 'vitD3000', emoji: '💪', titulo: 'Reforço', desc: '3000 UI acumulados', check: s => s.vitDTotal >= 3000 },
+  { id: 'perfilOk', emoji: '👤', titulo: 'Perfil completo', desc: 'Preencha seus dados', check: s => s.perfilOk },
+  { id: 'explorador', emoji: '🌍', titulo: 'Explorador', desc: 'UV acima de 8', check: s => s.maxUV >= 8 }
+];
+
+function atualizarConquistas() {
+  const s = {
+    total: estado.historico.length,
+    minutos: estado.historico.reduce((a,r) => a + r.duracao/60, 0),
+    vitDTotal: estado.historico.reduce((a,r) => a + r.vitD, 0),
+    maxVitD: estado.historico.reduce((a,r) => Math.max(a, r.vitD), 0),
+    maxUV: estado.historico.reduce((a,r) => Math.max(a, r.uv), 0),
+    perfilOk: !!estado.perfil
+  };
+  $('conquistasGrid').innerHTML = conquistas.map(c => {
+    const ok = c.check(s);
+    return `
+      <div class="conquista ${ok ? 'desbloqueada' : ''}">
+        <span class="emoji">${c.emoji}</span>
+        <strong>${c.titulo}</strong>
+        <small>${c.desc}</small>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ============================================================
+   INICIALIZAÇÃO
+   ============================================================ */
+function init() {
+  carregar();
+  aplicarTema();
+  atualizarInterfaceUsuario();
+  atualizarDashboard();
+  atualizarHistorico();
+  atualizarInfoUV();
+
+  const v = estado.uvAtual;
+  $('uvRange').value = v;
+  $('uvValor').textContent = v;
+  $('uvNumeroMedidor').innerHTML = v + '<small>Índice UV</small>';
+  const ang = -90 + (v / 12) * 180;
+  $('uvPonteiro').style.transform = `translateX(-50%) rotate(${ang}deg)`;
+
+  if (!estado.perfil) {
+    setTimeout(() => toast('Bem-vindo ao SunSafe! Cadastre seu perfil para começar.', 'info'), 600);
+  }
+}
+
+init();
+</script>
+</body>
+</html>
