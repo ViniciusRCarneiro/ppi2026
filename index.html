@@ -203,6 +203,14 @@ input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;bac
 .sobre-bloco h3{font-family:'Space Grotesk',sans-serif;font-size:1rem;margin-bottom:.4rem;color:var(--texto)}
 .sobre-bloco p{font-size:.9rem;color:var(--texto-suave)}
 
+.local-box{text-align:center;padding:1.2rem 1rem;background:linear-gradient(135deg,rgba(255,217,61,.08),rgba(255,159,28,.05));border-radius:14px;border:1.5px dashed var(--borda);margin-bottom:1rem}
+.local-box .icone-gps{font-size:2.6rem;display:block;margin-bottom:.5rem}
+.local-box .cidade{font-family:'Space Grotesk',sans-serif;font-size:1.15rem;font-weight:800;color:var(--texto);line-height:1.3}
+.local-box .estado{font-size:.85rem;color:var(--texto-suave);margin-top:.15rem}
+.local-box .pais{font-size:.85rem;color:var(--texto-suave);display:flex;align-items:center;justify-content:center;gap:.4rem;margin-top:.3rem}
+.local-box .pais .bandeira{font-size:1.1rem}
+.local-box .coords{font-size:.72rem;color:var(--texto-suave);margin-top:.6rem;font-family:'Space Grotesk',monospace;letter-spacing:.5px}
+
 @media(max-width:600px){.fototipo-grid{grid-template-columns:repeat(3,1fr)}.page-header h1{font-size:1.4rem}}
 
 .toast-container{position:fixed;top:1.5rem;right:1.5rem;z-index:200;display:flex;flex-direction:column;gap:.6rem}
@@ -213,6 +221,9 @@ input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;bac
 @keyframes toastEntrar{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
 
 canvas{max-height:320px}
+
+.loader{display:inline-block;width:18px;height:18px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -311,7 +322,7 @@ canvas{max-height:320px}
             <div class="card-titulo"><div class="icone">👤</div>Dados pessoais</div>
             <div class="campo"><label for="nome">Nome</label><input type="text" id="nome" placeholder="Digite seu nome" /></div>
             <div class="campo"><label for="idade">Idade</label><input type="number" id="idade" placeholder="Ex.: 30" min="1" max="120" /></div>
-            <div class="campo"><label for="cidade">Cidade</label><input type="text" id="cidade" placeholder="Ex.: São Paulo" /></div>
+            <div class="campo"><label for="cidade">Cidade</label><input type="text" id="cidade" placeholder="Ex.: São Paulo, SP" /></div>
             <div class="campo">
               <label>Sensibilidade solar</label>
               <select id="sensibilidade">
@@ -397,36 +408,61 @@ canvas{max-height:320px}
         </div>
       </section>
 
-      <!-- UV -->
+      <!-- UV EM TEMPO REAL -->
       <section class="view" id="view-uv">
-        <div class="page-header"><h1>Índice UV</h1><p>Simule o Índice UV local e veja o alerta personalizado.</p></div>
+        <div class="page-header">
+          <h1>Índice UV em Tempo Real</h1>
+          <p>O sistema detecta sua localização e busca o Índice UV atual automaticamente.</p>
+        </div>
 
         <div class="grid grid-2">
           <div class="card">
-            <div class="card-titulo"><div class="icone">🌡️</div>Ajuste o Índice UV</div>
-            <div class="slider-wrap">
-              <input type="range" id="uvRange" min="0" max="12" step="1" value="6" />
-              <div class="uv-valor" id="uvValor">6</div>
+            <div class="card-titulo"><div class="icone rosa">📍</div>Sua Localização</div>
+
+            <div class="local-box" id="localBox">
+              <span class="icone-gps">🛰️</span>
+              <div id="localizacaoStatus" class="subtitulo" style="margin:0">Clique para detectar sua localização</div>
             </div>
-            <p class="subtitulo" style="margin-top:.5rem">0 = noite · 3 = baixo · 6 = alto · 11+ = extremo</p>
+
             <div class="botoes-linha">
-              <button class="btn btn-azul" id="btnVerificarUV">🔔 Verificar alerta</button>
+              <button class="btn btn-azul" id="btnDetectarLocal">📍 Detectar Localização</button>
             </div>
-            <div class="alerta" id="alertaUV"></div>
+
+            <div class="botoes-linha">
+              <button class="btn btn-ghost btn-sm" id="btnAtualizarUV">🔄 Atualizar UV</button>
+            </div>
+
+            <div class="alerta" id="alertaLocal"></div>
+
+            <div class="info-lista" style="margin-top:1rem">
+              <div class="info-linha"><span>Latitude</span><strong id="infoLat">—</strong></div>
+              <div class="info-linha"><span>Longitude</span><strong id="infoLon">—</strong></div>
+              <div class="info-linha"><span>Atualizado</span><strong id="infoAtualizado">—</strong></div>
+            </div>
           </div>
 
           <div class="card">
-            <div class="card-titulo"><div class="icone rosa">🎯</div>Medidor</div>
+            <div class="card-titulo"><div class="icone">🌡️</div>Índice UV Atual</div>
+
             <div class="uv-medidor">
               <div class="uv-arco"></div>
               <div class="uv-ponteiro" id="uvPonteiro"></div>
-              <div class="uv-numero" id="uvNumeroMedidor">6<small>Índice UV</small></div>
+              <div class="uv-numero" id="uvNumeroMedidor">—<small>Índice UV</small></div>
             </div>
+
             <div class="info-lista" style="margin-top:1.5rem">
               <div class="info-linha"><span>Tempo seguro estimado</span><strong id="tempoSeguroUV">—</strong></div>
               <div class="info-linha"><span>Vitamina D em 30 min</span><strong id="vitD30min">—</strong></div>
+              <div class="info-linha"><span>Nível de risco</span><strong id="nivelRiscoUV">—</strong></div>
             </div>
+
+            <div class="alerta" id="alertaUV"></div>
           </div>
+        </div>
+
+        <div class="card" style="margin-top:1.25rem">
+          <div class="card-titulo"><div class="icone azul">📈</div>Previsão UV (próximas horas)</div>
+          <canvas id="graficoUVPrev"></canvas>
         </div>
       </section>
 
@@ -483,8 +519,8 @@ canvas{max-height:320px}
           <div class="card">
             <div class="card-titulo"><div class="icone">ℹ️</div>Objetivo</div>
             <div class="sobre-bloco"><h3>Saúde preventiva</h3><p>O SunSafe ajuda a equilibrar os benefícios da exposição solar (síntese de Vitamina D) com os riscos da radiação ultravioleta (queimaduras, envelhecimento precoce e câncer de pele).</p></div>
-            <div class="sobre-bloco"><h3>Personalização</h3><p>Os cálculos consideram o fototipo de pele, a sensibilidade individual e o Índice UV local.</p></div>
-            <div class="sobre-bloco"><h3>Privacidade</h3><p>Todos os dados ficam salvos apenas no seu navegador (localStorage). Nada é enviado para servidores externos.</p></div>
+            <div class="sobre-bloco"><h3>Personalização</h3><p>Os cálculos consideram o fototipo de pele, a sensibilidade individual e o Índice UV em tempo real da sua localização.</p></div>
+            <div class="sobre-bloco"><h3>Privacidade</h3><p>Todos os dados ficam salvos apenas no seu navegador (localStorage). Nada é enviado para servidores externos além das consultas anônimas às APIs públicas de UV.</p></div>
           </div>
 
           <div class="card">
@@ -516,7 +552,10 @@ let estado = {
   cronoInterval: null,
   cronoSegundos: 0,
   uvAtual: 6,
-  tema: 'claro'
+  tema: 'claro',
+  localizacao: null,
+  localizacaoNome: null,
+  uvTempoReal: null
 };
 
 function carregar() {
@@ -527,6 +566,7 @@ function carregar() {
       estado.perfil = d.perfil || null;
       estado.historico = d.historico || [];
       estado.tema = d.tema || 'claro';
+      estado.localizacaoNome = d.localizacaoNome || null;
     }
   } catch(e) { console.warn(e); }
 }
@@ -534,7 +574,8 @@ function salvar() {
   localStorage.setItem(STORAGE, JSON.stringify({
     perfil: estado.perfil,
     historico: estado.historico,
-    tema: estado.tema
+    tema: estado.tema,
+    localizacaoNome: estado.localizacaoNome
   }));
 }
 
@@ -553,7 +594,7 @@ function toast(msg, tipo='info') {
     el.style.transform = 'translateX(120%)';
     el.style.transition = 'all .35s';
     setTimeout(() => el.remove(), 350);
-  }, 3200);
+  }, 3400);
 }
 
 function formatarTempo(seg) {
@@ -573,7 +614,7 @@ const titulos = {
   dashboard: ['Painel', 'Visão geral da sua exposição solar'],
   perfil: ['Meu Perfil', 'Dados pessoais e fototipo de pele'],
   exposicao: ['Exposição', 'Cronômetro e estimativa de Vitamina D'],
-  uv: ['Índice UV', 'Simule o índice e veja alertas personalizados'],
+  uv: ['Índice UV', 'Detecção automática da sua localização'],
   historico: ['Histórico', 'Todas as sessões registradas'],
   relatorios: ['Relatórios', 'Gráficos e tabelas analíticas'],
   conquistas: ['Conquistas', 'Medalhas desbloqueadas'],
@@ -595,6 +636,7 @@ function navegar(view) {
   if (view === 'relatorios') atualizarGraficos();
   if (view === 'conquistas') atualizarConquistas();
   if (view === 'historico') atualizarHistorico();
+  if (view === 'uv') autoDetectarUV();
 }
 
 document.querySelectorAll('.nav-item').forEach(btn => {
@@ -650,6 +692,7 @@ $('btnSalvarPerfil').addEventListener('click', () => {
 
 function mostrarAlerta(id, texto, nivel) {
   const el = $(id);
+  if (!el) return;
   el.textContent = texto;
   el.className = 'alerta visivel ' + nivel;
   setTimeout(() => el.classList.remove('visivel'), 4000);
@@ -692,54 +735,254 @@ function estimarVitaminaD(fototipo, minutos, uv) {
 }
 
 /* ============================================================
-   UV
+   UV EM TEMPO REAL — Geolocalização + APIs
    ============================================================ */
-$('uvRange').addEventListener('input', e => {
-  const v = parseInt(e.target.value);
-  estado.uvAtual = v;
-  $('uvValor').textContent = v;
-  $('uvNumeroMedidor').innerHTML = v + '<small>Índice UV</small>';
-  const ang = -90 + (v / 12) * 180;
-  $('uvPonteiro').style.transform = `translateX(-50%) rotate(${ang}deg)`;
-  atualizarInfoUV();
+const UV_API = 'https://currentuvindex.com/api/v1/uvi';
+let graficoUV = null;
+
+$('btnDetectarLocal').addEventListener('click', detectarLocalizacao);
+$('btnAtualizarUV').addEventListener('click', () => {
+  if (estado.localizacao) {
+    buscarUV(estado.localizacao.latitude, estado.localizacao.longitude);
+  } else {
+    toast('Detecte sua localização primeiro.', 'erro');
+  }
 });
 
-function atualizarInfoUV() {
+function detectarLocalizacao() {
+  if (!navigator.geolocation) {
+    toast('Geolocalização não é suportada neste navegador.', 'erro');
+    return;
+  }
+
+  $('btnDetectarLocal').disabled = true;
+  $('btnDetectarLocal').innerHTML = '<span class="loader"></span> Detectando...';
+  $('localizacaoStatus').textContent = 'Detectando sua localização...';
+
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      const { latitude, longitude } = pos.coords;
+      estado.localizacao = { latitude, longitude };
+
+      $('infoLat').textContent = latitude.toFixed(4);
+      $('infoLon').textContent = longitude.toFixed(4);
+
+      // 1) Reverse geocoding (cidade, estado, país)
+      await buscarNomeCidade(latitude, longitude);
+
+      // 2) Buscar UV em tempo real
+      await buscarUV(latitude, longitude);
+
+      $('btnDetectarLocal').disabled = false;
+      $('btnDetectarLocal').textContent = '📍 Detectar Novamente';
+      toast('Localização detectada com sucesso!', 'sucesso');
+    },
+    (erro) => {
+      let msg = 'Erro ao detectar localização.';
+      if (erro.code === 1) msg = 'Permissão negada. Habilite o acesso à localização.';
+      if (erro.code === 2) msg = 'Localização indisponível.';
+      if (erro.code === 3) msg = 'Tempo esgotado ao detectar localização.';
+
+      $('localizacaoStatus').textContent = msg;
+      $('btnDetectarLocal').disabled = false;
+      $('btnDetectarLocal').textContent = '📍 Detectar Localização';
+      toast(msg, 'erro');
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+  );
+}
+
+/* ============================================================
+   REVERSE GEOCODING — Cidade, Estado e País
+   BigDataCloud (gratuito, sem chave, preciso)
+   ============================================================ */
+async function buscarNomeCidade(lat, lon) {
+  const statusEl = $('localizacaoStatus');
+  try {
+    const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=pt`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+
+    const cidade = data.city || data.locality || data.principalSubdivision || 'Local desconhecido';
+    const estado = data.principalSubdivision || '';
+    const pais = data.countryName || '';
+    const codigoPais = data.countryCode || '';
+
+    // Bandeira emoji a partir do código do país
+    const bandeira = codigoPais
+      ? String.fromCodePoint(...[...codigoPais.toUpperCase()].map(c => 127397 + c.charCodeAt(0)))
+      : '🌍';
+
+    // Salva no estado
+    estado.localizacaoNome = { cidade, estado, pais, bandeira };
+    salvar();
+
+    // Renderiza o box de localização completo
+    statusEl.outerHTML = `
+      <div id="localizacaoStatus">
+        <div class="cidade">${cidade}</div>
+        ${estado && estado !== cidade ? `<div class="estado">${estado}</div>` : ''}
+        <div class="pais"><span class="bandeira">${bandeira}</span> ${pais}</div>
+        <div class="coords">Lat ${lat.toFixed(4)} · Lon ${lon.toFixed(4)}</div>
+      </div>
+    `;
+
+    // Atualiza topbar e campo do perfil
+    if (estado.perfil && !estado.perfil.cidade) {
+      estado.perfil.cidade = `${cidade}${estado ? ', ' + estado : ''}`;
+      salvar();
+      $('cidade').value = estado.perfil.cidade;
+    }
+  } catch (e) {
+    console.warn('Reverse geocoding falhou', e);
+    statusEl.innerHTML = `
+      <div class="cidade">Localização detectada</div>
+      <div class="coords">Lat ${lat.toFixed(4)} · Lon ${lon.toFixed(4)}</div>
+    `;
+  }
+}
+
+async function buscarUV(lat, lon) {
+  try {
+    const url = `${UV_API}?latitude=${lat}&longitude=${lon}`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+
+    if (!data.ok) throw new Error(data.message || 'Erro na API');
+
+    estado.uvTempoReal = {
+      atual: data.now.uvi,
+      hora: data.now.time,
+      previsao: data.forecast || [],
+      historico: data.history || []
+    };
+
+    const uv = Math.round(estado.uvTempoReal.atual);
+    estado.uvAtual = uv;
+
+    // Medidor
+    $('uvNumeroMedidor').innerHTML = uv + '<small>Índice UV</small>';
+    const ang = -90 + (Math.min(uv, 12) / 12) * 180;
+    $('uvPonteiro').style.transform = `translateX(-50%) rotate(${ang}deg)`;
+
+    // Risco
+    const risco = classificarRiscoUV(uv);
+    $('nivelRiscoUV').textContent = risco.emoji + ' ' + risco.label;
+    $('nivelRiscoUV').style.color = risco.cor;
+
+    // Info personalizada
+    atualizarInfoUVTempoReal(uv);
+
+    // Gráfico
+    atualizarGraficoUV(estado.uvTempoReal.previsao);
+
+    // Timestamp
+    const agora = new Date();
+    $('infoAtualizado').textContent = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    // Alerta
+    mostrarAlerta('alertaLocal',
+      `✅ Índice UV ${uv} em sua localização.`,
+      uv <= 2 ? 'baixo' : uv <= 5 ? 'medio' : uv <= 7 ? 'alto' : 'critico'
+    );
+
+  } catch (e) {
+    console.error(e);
+    toast('Não foi possível obter o Índice UV. Tente novamente.', 'erro');
+  }
+}
+
+function classificarRiscoUV(uv) {
+  if (uv <= 2) return { label: 'Baixo', emoji: '🟢', cor: '#06D6A0' };
+  if (uv <= 5) return { label: 'Moderado', emoji: '🟡', cor: '#FFD93D' };
+  if (uv <= 7) return { label: 'Alto', emoji: '🟠', cor: '#FF9F1C' };
+  if (uv <= 10) return { label: 'Muito Alto', emoji: '🔴', cor: '#EF476F' };
+  return { label: 'Extremo', emoji: '🟣', cor: '#B5179E' };
+}
+
+function atualizarInfoUVTempoReal(uv) {
   if (!estado.perfil) {
     $('tempoSeguroUV').textContent = '—';
     $('vitD30min').textContent = '—';
     return;
   }
   const { fototipo, sensibilidade } = estado.perfil;
-  const t = calcularTempoSeguro(fototipo, estado.uvAtual, sensibilidade);
-  const v = estimarVitaminaD(fototipo, 30, estado.uvAtual);
+  const t = calcularTempoSeguro(fototipo, uv, sensibilidade);
+  const v = estimarVitaminaD(fototipo, 30, uv);
   $('tempoSeguroUV').textContent = t + ' min';
   $('vitD30min').textContent = v + ' UI';
 }
 
-$('btnVerificarUV').addEventListener('click', () => {
-  if (!estado.perfil) { toast('Cadastre seu perfil primeiro.', 'erro'); return; }
-  const uv = estado.uvAtual;
-  const { fototipo, sensibilidade } = estado.perfil;
-  const t = calcularTempoSeguro(fototipo, uv, sensibilidade);
-  let nivel, msg;
+function atualizarGraficoUV(previsao) {
+  if (!previsao || !previsao.length) return;
+  const horas = previsao.slice(0, 12);
+  const labels = horas.map(h => {
+    const d = new Date(h.time);
+    return d.getHours() + 'h';
+  });
+  const dados = horas.map(h => h.uvi);
 
-  if (uv <= 2) { nivel='baixo'; msg=`☀️ UV baixo (${uv}). Exposição segura. Tempo recomendado: ${t} min.`; }
-  else if (uv <= 5) { nivel='medio'; msg=`🌤️ UV moderado (${uv}). Use proteção. Limite: ${t} min.`; }
-  else if (uv <= 7) { nivel='alto'; msg=`⚠️ UV alto (${uv}). Proteção obrigatória. Limite: ${t} min.`; }
-  else { nivel='critico'; msg=`🚨 UV muito alto (${uv}). Evite exposição. Limite: ${t} min.`; }
+  if (graficoUV) graficoUV.destroy();
 
-  if (fototipo <= 2) msg += ' Sua pele é muito sensível — redobre o cuidado.';
-  if (fototipo >= 5) msg += ' Sua pele tolera mais, mas exige mais tempo para Vitamina D.';
+  graficoUV = new Chart($('graficoUVPrev'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Índice UV',
+        data: dados,
+        borderColor: '#FF9F1C',
+        backgroundColor: 'rgba(255,159,28,.15)',
+        fill: true,
+        tension: .4,
+        pointBackgroundColor: '#FF6B35',
+        pointRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, max: 12, title: { display: true, text: 'UV' } } }
+    }
+  });
+}
 
-  mostrarAlerta('alertaUV', msg, nivel);
-  atualizarInfoUV();
-});
+function autoDetectarUV() {
+  // Se já temos nome salvo, exibe o box bonito imediatamente
+  if (estado.localizacaoNome) {
+    const { cidade, estado: uf, pais, bandeira } = estado.localizacaoNome;
+    const statusEl = $('localizacaoStatus');
+    if (statusEl) {
+      statusEl.outerHTML = `
+        <div id="localizacaoStatus">
+          <div class="cidade">${cidade}</div>
+          ${uf && uf !== cidade ? `<div class="estado">${uf}</div>` : ''}
+          <div class="pais"><span class="bandeira">${bandeira}</span> ${pais}</div>
+        </div>
+      `;
+    }
+  }
+
+  if (estado.localizacao) {
+    buscarUV(estado.localizacao.latitude, estado.localizacao.longitude);
+    return;
+  }
+  if (!navigator.geolocation) return;
+  if (navigator.permissions && navigator.permissions.query) {
+    navigator.permissions.query({ name: 'geolocation' }).then(perm => {
+      if (perm.state === 'granted') detectarLocalizacao();
+    }).catch(() => {});
+  }
+}
+
+function atualizarInfoUV() {
+  const uv = estado.uvTempoReal ? Math.round(estado.uvTempoReal.atual) : estado.uvAtual;
+  atualizarInfoUVTempoReal(uv);
+}
 
 /* ============================================================
-   CRONÔMETRO (CORRIGIDO)
+   CRONÔMETRO
    ============================================================ */
-
 function atualizarDisplayCrono() {
   $('cronometro').textContent = formatarTempo(estado.cronoSegundos);
   const pct = Math.min(1, estado.cronoSegundos / 3600);
@@ -798,18 +1041,12 @@ $('btnParar').addEventListener('click', () => {
     return;
   }
 
-  const uv = estado.uvAtual;
+  const uv = estado.uvTempoReal ? Math.round(estado.uvTempoReal.atual) : estado.uvAtual;
   const fototipo = estado.perfil.fototipo;
   const minutos = duracao / 60;
   const vitD = estimarVitaminaD(fototipo, minutos, uv);
 
-  const registro = {
-    id: Date.now(),
-    data: formatarData(),
-    duracao,
-    uv,
-    vitD
-  };
+  const registro = { id: Date.now(), data: formatarData(), duracao, uv, vitD };
   estado.historico.push(registro);
   salvar();
 
@@ -829,7 +1066,6 @@ $('btnParar').addEventListener('click', () => {
 
   atualizarDashboard();
   atualizarHistorico();
-
   resetarCrono();
 });
 
@@ -925,7 +1161,7 @@ function atualizarDashboard() {
 }
 
 /* ============================================================
-   GRÁFICOS
+   GRÁFICOS DE RELATÓRIO
    ============================================================ */
 let gMin = null, gVit = null;
 
@@ -1031,12 +1267,8 @@ function init() {
   atualizarHistorico();
   atualizarInfoUV();
 
-  const v = estado.uvAtual;
-  $('uvRange').value = v;
-  $('uvValor').textContent = v;
-  $('uvNumeroMedidor').innerHTML = v + '<small>Índice UV</small>';
-  const ang = -90 + (v / 12) * 180;
-  $('uvPonteiro').style.transform = `translateX(-50%) rotate(${ang}deg)`;
+  // Ponteiro UV inicial
+  $('uvPonteiro').style.transform = 'translateX(-50%) rotate(-90deg)';
 
   if (!estado.perfil) {
     setTimeout(() => toast('Bem-vindo ao SunSafe! Cadastre seu perfil para começar.', 'info'), 600);
@@ -1046,4 +1278,4 @@ function init() {
 init();
 </script>
 </body>
-</html>
+</html> 
