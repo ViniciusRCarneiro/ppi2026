@@ -188,13 +188,21 @@ input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;bac
 .vazio .emoji{width:48px;height:48px;margin:0 auto .5rem;color:var(--texto-suave);opacity:.5}
 .vazio .emoji svg{width:100%;height:100%;stroke-width:1.5}
 
-.conquistas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.85rem}
-.conquista{text-align:center;padding:1.2rem .8rem;border-radius:14px;background:var(--card-2);border:1.5px solid var(--borda);opacity:.45;filter:grayscale(1);transition:all .3s}
+/* ===================== CONQUISTAS ===================== */
+.conquistas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem}
+.conquista{text-align:center;padding:1.5rem 1rem;border-radius:14px;background:var(--card-2);border:1.5px solid var(--borda);opacity:.45;filter:grayscale(1);transition:all .3s;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:.35rem;min-height:150px}
 .conquista.desbloqueada{opacity:1;filter:none;border-color:var(--sol-2);background:linear-gradient(135deg,rgba(255,217,61,.15),rgba(255,159,28,.1));box-shadow:0 8px 24px rgba(255,159,28,.2)}
-.conquista .emoji{width:36px;height:36px;margin:0 auto .4rem;color:var(--sol-3)}
+.conquista .emoji{width:40px;height:40px;color:var(--sol-3);flex-shrink:0;margin-bottom:.35rem}
 .conquista .emoji svg{width:100%;height:100%;stroke-width:1.8}
-.conquista strong{display:block;font-size:.85rem;color:var(--texto)}
-.conquista small{font-size:.72rem;color:var(--texto-suave)}
+.conquista strong{display:block;font-size:.9rem;font-weight:700;color:var(--texto);line-height:1.3;word-break:break-word}
+.conquista small{font-size:.75rem;color:var(--texto-suave);line-height:1.4;word-break:break-word}
+
+@media(max-width:600px){
+  .conquistas-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.75rem}
+  .conquista{padding:1.15rem .75rem;min-height:135px}
+  .conquista .emoji{width:34px;height:34px}
+}
+/* ======================================================= */
 
 .tabela{width:100%;border-collapse:collapse;font-size:.88rem}
 .tabela th,.tabela td{padding:.7rem .8rem;text-align:left;border-bottom:1px solid var(--borda)}
@@ -607,7 +615,7 @@ canvas{max-height:320px}
   </div>
 </div>
 
-<!-- MODAL GOOGLE MAPS -->
+<!-- MODAL MAPA -->
 <div class="modal-overlay" id="modalMapa">
   <div class="modal">
     <div class="modal-header">
@@ -639,7 +647,7 @@ canvas{max-height:320px}
 
 <div class="toast-container" id="toastContainer"></div>
 
-<!-- Leaflet (Google Maps gratuito alternativo) -->
+<!-- Leaflet -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -1080,7 +1088,7 @@ function atualizarInfoUV() {
 }
 
 /* ============================================================
-   MAPA — Leaflet (alternativa gratuita ao Google Maps)
+   MAPA — Leaflet
    ============================================================ */
 let mapa = null;
 let marcadorMapa = null;
@@ -1094,7 +1102,6 @@ $('btnConfirmarMapa').addEventListener('click', confirmarMapa);
 function abrirMapa() {
   $('modalMapa').classList.add('ativo');
 
-  // Inicializa o mapa na primeira abertura
   if (!mapa) {
     const latInicial = estado.localizacao?.latitude || -23.5505;
     const lonInicial = estado.localizacao?.longitude || -46.6333;
@@ -1110,7 +1117,6 @@ function abrirMapa() {
       maxZoom: 19
     }).addTo(mapa);
 
-    // Clique no mapa para posicionar marcador
     mapa.on('click', (e) => {
       const { lat, lng } = e.latlng;
       coordsSelecionadas = { latitude: lat, longitude: lng };
@@ -1133,7 +1139,6 @@ function abrirMapa() {
       $('btnConfirmarMapa').disabled = false;
     });
 
-    // Se já houver localização salva, posiciona marcador
     if (estado.localizacao) {
       const { latitude, longitude } = estado.localizacao;
       coordsSelecionadas = { latitude, longitude };
@@ -1150,7 +1155,6 @@ function abrirMapa() {
       $('btnConfirmarMapa').disabled = false;
     }
   } else {
-    // Redimensiona o mapa ao reabrir (evita tiles cinzas)
     setTimeout(() => mapa.invalidateSize(), 100);
     if (estado.localizacao) {
       mapa.setView([estado.localizacao.latitude, estado.localizacao.longitude], 12);
@@ -1176,7 +1180,6 @@ async function confirmarMapa() {
 
   fecharMapa();
 
-  // Busca nome da cidade e UV
   await buscarNomeCidade(latitude, longitude);
   await buscarUV(latitude, longitude);
 
